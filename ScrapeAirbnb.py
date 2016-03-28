@@ -1,10 +1,12 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sat Nov  1 20:29:41 2014
 
 @author: Hamel Husain, TODO: Name Everyone In Group
 CS109 Harvard Intro To Data Science
 Scraping Airbnb
+
+Update on Mon Mar 28 2016
+@Claire Tsao
 """
 
 import mechanize
@@ -17,6 +19,7 @@ from random import randint
 from time import sleep
 from lxml.etree import tostring
 import bs4
+from pprint import pprint
 
 
 
@@ -43,6 +46,9 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 #specify browser to emulate
 br.addheaders = [('User-agent',
 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
+
+
+
 
 #######################################
 #  Wrapper Functions    ###############
@@ -95,7 +101,7 @@ def IterateMainPage(location_string, loop_limit):
 #######################################
 
 
-def ParseMainXML(url= 'https://www.airbnb.com/s/Cambridge--MA--United-States', pg = 0):
+def ParseMainXML(url= 'https://www.airbnb.com/s/andorra', pg = 0):
 
     """
     input: url (string )
@@ -120,7 +126,7 @@ def ParseMainXML(url= 'https://www.airbnb.com/s/Cambridge--MA--United-States', p
 
         tree = html.fromstring(br.open(url).get_data())
         listings = tree.xpath('//div[@class="listing"]')
-
+        
         #TODO: add error handling
         for listing in listings:
             dat = {}
@@ -132,7 +138,7 @@ def ParseMainXML(url= 'https://www.airbnb.com/s/Cambridge--MA--United-States', p
             dat['UserID'] = listing.attrib.get('data-user', 'Unknown')
             dat['Price'] = ''.join(listing.xpath('div//span[@class="h3 text-contrast price-amount"]/text()'))
             dat['PageCounter'] = n
-            dat['OverallCounter'] = n * pg
+            dat['OverallCounter'] = 18 * (pg - 1) + n  #modify the counter
             dat['PageNumber'] = pg
 
             ShortDesc = listing.xpath('div//div[@class="media"]/div/a')
@@ -155,6 +161,7 @@ def ParseMainXML(url= 'https://www.airbnb.com/s/Cambridge--MA--United-States', p
         print 'Error Parsing Page - Skipping: %s' % url
         #if there is an error, just return an empty list
         return ListingDB
+
 
 
 
@@ -183,6 +190,8 @@ def iterateDetail(mainResults):
 
         #Get the tree
         tree = getTree(currentURL)
+        with open("test.html", "wb") as f:
+            f.write(tostring(tree))
 
         #Parse the data out of the tree
         DetailResults = collectDetail(tree, listing['ListingID'])
@@ -306,78 +315,80 @@ def collectDetail(treeObject, ListingID):
                      'S_Checkout' : 'Not Found'
                      }
 
-    try:
-        #Hamel's Functions
-        ###################
-        Results['AboutListing'] = getAboutListing(treeObject, ListingID)
-        Space = getSpaceInfo(treeObject, ListingID)
-        Results['S_PropType'] = Space['PropType']
-        Results['S_Accomodates'] = Space['Accommodates']
-        Results['S_Bedrooms'] = Space['Bedrooms']
-        Results['S_Bathrooms'] = Space['Bathrooms']
-        Results['S_NumBeds'] = Space['NumBeds']
-        Results['S_BedType'] = Space['BedType']
-        Results['S_CheckIn'] = Space['CheckIn']
-        Results['S_Checkout'] = Space['CheckOut']
+    #try:
+    #Hamel's Functions
+    ###################
+    Results['AboutListing'] = getAboutListing(treeObject, ListingID)
+    Space = getSpaceInfo(treeObject, ListingID)
+    Results['S_PropType'] = Space['PropType']
+    Results['S_Accomodates'] = Space['Accommodates']
+    Results['S_Bedrooms'] = Space['Bedrooms']
+    Results['S_Bathrooms'] = Space['Bathrooms']
+    Results['S_NumBeds'] = Space['NumBeds']
+    Results['S_BedType'] = Space['BedType']
+    Results['S_CheckIn'] = Space['CheckIn']
+    Results['S_Checkout'] = Space['CheckOut']
 
 
 
-        #Yi's Functions
-        ####################
-        Results['HostName'] = getHostName(TreeToSoup(treeObject), ListingID)
-        Results['RespRate'], Results['RespTime'] = getHostResponse(TreeToSoup(treeObject), ListingID)
-        Results['MemberDate'] = getMemberDate(TreeToSoup(treeObject), ListingID)
+    #Yi's Functions
+    ####################
+    Results['HostName'] = getHostName(TreeToSoup(treeObject), ListingID)
+    Results['RespRate'], Results['RespTime'] = getHostResponse(TreeToSoup(treeObject), ListingID)
+    Results['MemberDate'] = getMemberDate(TreeToSoup(treeObject), ListingID)
 
-        #accuracy, communication, cleanliness, location, checkin, value
-        Results['R_acc'], Results['R_comm'], Results['R_clean'], Results['R_loc'], \
-        Results['R_CI'], Results['R_val'] = getStars(TreeToSoup(treeObject), ListingID)
+    #accuracy, communication, cleanliness, location, checkin, value
+    Results['R_acc'], Results['R_comm'], Results['R_clean'], Results['R_loc'],     Results['R_CI'], Results['R_val'] = getStars(TreeToSoup(treeObject), ListingID)
 
-        #price
-        PriceData = getPriceInfo(treeObject, ListingID)
-        Results['P_ExtraPeople'] = PriceData['ExtraPeople']
-        Results['P_Cleaning'] = PriceData['CleaningFee']
-        Results['P_Deposit'] = PriceData['SecurityDeposit']
-        Results['P_Weekly'] = PriceData['WeeklyPrice']
-        Results['P_Monthly'] = PriceData['MonthlyPrice']
-        Results['Cancellation'] = PriceData['Cancellation']
+    #price
+    PriceData = getPriceInfo(treeObject, ListingID)
+    Results['P_ExtraPeople'] = PriceData['ExtraPeople']
+    Results['P_Cleaning'] = PriceData['CleaningFee']
+    Results['P_Deposit'] = PriceData['SecurityDeposit']
+    Results['P_Weekly'] = PriceData['WeeklyPrice']
+    Results['P_Monthly'] = PriceData['MonthlyPrice']
+    Results['Cancellation'] = PriceData['Cancellation']
 
-        #Amenities
-        Am = getAmenities(treeObject, ListingID)
-        Results['A_Kitchen'] = Am['Kitchen']
-        Results['A_Internet'] = Am['Internet']
-        Results['A_TV'] = Am['TV']
-        Results['A_Essentials'] = Am['Essentials' ]
-        Results['A_Shampoo'] = Am['Shampoo']
-        Results['A_Heat'] = Am['Heating']
-        Results['A_AC'] = Am['Air Conditioning']
-        Results['A_Washer'] = Am['Washer']
-        Results['A_Dryer'] = Am['Dryer']
-        Results['A_Parking'] = Am['Free Parking on Premises']
-        Results['A_Internet'] = Am['Wireless Internet']
-        Results['A_CableTV'] = Am['Cable TV' ]
-        Results['A_Breakfast'] =  Am['Breakfast']
-        Results['A_Pets'] = Am['Pets Allowed']
-        Results['A_FamilyFriendly'] = Am['Family/Kid Friendly']
-        Results['A_Events'] = Am['Suitable for Events']
-        Results['A_Smoking'] = Am['Smoking Allowed']
-        Results['A_Wheelchair'] = Am['Wheelchair Accessible']
-        Results['A_Elevator'] = Am['Elevator in Building']
-        Results['A_Fireplace'] = Am['Indoor Fireplace' ]
-        Results['A_Intercom'] = Am['Buzzer/Wireless Intercom']
-        Results['A_Doorman'] = Am['Doorman']
-        Results['A_Pool'] = Am['Pool']
-        Results['A_HotTub'] = Am['Hot Tub']
-        Results['A_Gym'] = Am['Gym']
-        Results['A_SmokeDetector'] = Am['Smoke Detector']
-        Results['A_CarbonMonoxDetector'] = Am['Carbon Monoxide Detector']
-        Results['A_FirstAidKit'] = Am['First Aid Kit' ]
-        Results['A_SafetyCard'] = Am['Safety Card']
-        Results['A_FireExt'] = Am['Fire Extinguisher']
-        return Results
-
+    #Amenities
+    Am = getAmenities(treeObject, ListingID)
+    Results['A_Kitchen'] = Am['Kitchen']
+    Results['A_Internet'] = Am['Internet']
+    Results['A_TV'] = Am['TV']
+    Results['A_Essentials'] = Am['Essentials' ]
+    Results['A_Shampoo'] = Am['Shampoo']
+    Results['A_Heat'] = Am['Heating']
+    Results['A_AC'] = Am['Air Conditioning']
+    Results['A_Washer'] = Am['Washer']
+    Results['A_Dryer'] = Am['Dryer']
+    Results['A_Parking'] = Am['Free Parking on Premises']
+    Results['A_Internet'] = Am['Wireless Internet']
+    Results['A_CableTV'] = Am['Cable TV' ]
+    Results['A_Breakfast'] =  Am['Breakfast']
+    Results['A_Pets'] = Am['Pets Allowed']
+    Results['A_FamilyFriendly'] = Am['Family/Kid Friendly']
+    Results['A_Events'] = Am['Suitable for Events']
+    Results['A_Smoking'] = Am['Smoking Allowed']
+    Results['A_Wheelchair'] = Am['Wheelchair Accessible']
+    Results['A_Elevator'] = Am['Elevator in Building']
+    Results['A_Fireplace'] = Am['Indoor Fireplace' ]
+    Results['A_Intercom'] = Am['Buzzer/Wireless Intercom']
+    Results['A_Doorman'] = Am['Doorman']
+    Results['A_Pool'] = Am['Pool']
+    Results['A_HotTub'] = Am['Hot Tub']
+    Results['A_Gym'] = Am['Gym']
+    Results['A_SmokeDetector'] = Am['Smoke Detector']
+    Results['A_CarbonMonoxDetector'] = Am['Carbon Monoxide Detector']
+    Results['A_FirstAidKit'] = Am['First Aid Kit' ]
+    Results['A_SafetyCard'] = Am['Safety Card']
+    Results['A_FireExt'] = Am['Fire Extinguisher']
+    return Results
+"""
     except:
         #Just Return Initialized Dictionary
+        print 'GetDetails fails T_T'
         return Results
+"""
+
 
 
 
@@ -397,12 +408,15 @@ def TreeToSoup(treeObject):
 def getHostName(soup, ListingID):
     """
     Written by Yi
+    -----------------
+    03/28/2016 Update by Claire:
+    Error. To be modified.
     """
+    #change path & serach pattern
     host_name = 'Not Found'
 
-    try:
-        host_name = soup.find_all("h4", {"class" : "row-space-4"})[2].text.strip("\n ").encode('utf8')
-        host_name = host_name.split(", ")[1]
+    try:  
+        host_name = soup.find("h3", {"class" : "row-space-1"}).find("a", {"class" : "link-reset"}).text.strip("\n ").encode('utf8')
         return host_name
 
     except:
@@ -412,13 +426,16 @@ def getHostName(soup, ListingID):
 def getHostResponse(soup, ListingID):
     """
     Written by Yi
+    -----------------
+    03/28/2016 Update by Claire:
+    Error. To be modified.
     """
     response_rate, response_time = ['Not Found'] * 2
 
     try:
-        host_member = soup.find_all("div", {"class" : "col-6"})[-1]
-        response_rate = host_member.find_all("strong")[0].text.encode('utf8')
-        response_time = host_member.find_all("strong")[1].text.encode('utf8')
+        host_info = soup.find_all("div", {"class" : "col-md-6"})
+        response_rate = host_info.find_all("strong")[0].text.encode('utf8')
+        response_time = host_info.find_all("strong")[1].text.encode('utf8')
         return response_rate, response_time
 
     except:
@@ -429,12 +446,15 @@ def getHostResponse(soup, ListingID):
 def getMemberDate(soup, ListingID):
     """
     Written by Yi
+    -----------------
+    03/28/2016 Update by Claire:
+    Error. To be modified.
     """
     membership_date = 'Not Found'
 
     try:
-        host_member = soup.find_all("div", {"class" : "col-md-6"})[-2]
-        membership_date = host_member.find_all("div")[1].text.encode('utf8').strip("\n ")
+        host_member = soup.find_all("div", {"class" : "col-md-12 text-muted"})
+        membership_date = host_member.find_all("span")[2].text.encode('utf8').strip("\n ")
         membership_date = membership_date.replace("Member since", "")
         return membership_date
 
@@ -446,10 +466,13 @@ def getMemberDate(soup, ListingID):
 def singlestar(index, soup):
     """
     Written by Yi
+    -----------------
+    03/28/2016 Update by Claire:
+    Error. To be modified.
     """
     stars = soup.find_all("div", {"class" : "foreground"})[index]
-    full_star = stars.find_all("i", {"class" : "icon icon-pink icon-beach icon-star"})
-    half_star=  stars.find_all("i", {"class" : "icon icon-pink icon-beach icon-star-half"})
+    full_star = stars.find_all("i", class_= re.compile("icon-star"))
+    half_star=  stars.find_all("i", class_= re.compile("icon-star-half"))
     total_star = len(full_star)+len(half_star)*0.5
     return total_star
 
@@ -457,6 +480,9 @@ def singlestar(index, soup):
 def getStars(soup, ListingID):
     """
     Written by Yi
+    -----------------
+    03/28/2016 Update by Claire:
+    Error. To be modified.
     """
     accuracy, communication, cleanliness, location, checkin, value = ['Not Found'] * 6
 
@@ -474,6 +500,8 @@ def getStars(soup, ListingID):
         print 'Unable to parse stars listing id: %s' % str(ListingID)
         return accuracy, communication, cleanliness, location, checkin, value
 
+
+
 #########################################
 ## Hamel's Functions ####################
 
@@ -484,16 +512,23 @@ def getAboutListing(tree, ListingID):
     -----------------
     This function parses an individual listing's page to find
     the "About This Listing" and extracts the associated text
+    -----------------
+    03/28/2016 Update by Claire:
+    Error. To be modified.
     """
     try:
     #Go To The Panel-Body
-        elements = tree.xpath('//div[@class="row-space-8 row-space-top-8"]/h4')
+        elements = tree.xpath('//div[@class="space-8 space-top-8"]/h4')
 
         #Search For "About This Listing" In Elements
         for element in elements:
             if element.text.find('About This Listing') >= 0:
                 #When You Find, it return the text that comes afterwards
-                return element.getnext().text
+                paragrphs = element.getnext().find_all('//p/span')
+                about = ''
+                for p in paragraphs:
+                    about += p.text
+                return about
 
     except:
         print 'Error finding *About Listing* for listing ID: %s' % ListingID
@@ -502,7 +537,7 @@ def getAboutListing(tree, ListingID):
 
 
 def getSpaceInfo(tree, ListingID = 'Test'):
-
+    
     """
     input: xmltree object
     output: dict
@@ -510,6 +545,9 @@ def getSpaceInfo(tree, ListingID = 'Test'):
     This function parses an individual listing's page to find
     the all of the data in the "Space" row, such as Number of
     Bedrooms, Number of Bathrooms, Check In/Out Time, etc.
+    -----------------
+    03/28/2016 Update by Claire:
+    Modified for current xml structure.
     """
     #Initialize Values
     dat = {'PropType': 'Not Found', 'Accommodates': 'Not Found',
@@ -519,76 +557,79 @@ def getSpaceInfo(tree, ListingID = 'Test'):
 
     try:
         #Get Nodes That Contain The Grey Text, So That You Can Search For Sections
-        elements = tree.xpath('//div[@class="row"]/div[@class="col-md-3"]/div[@class="text-muted"]')
+        elements = tree.xpath('//div[@class="col-md-3 text-muted"]/span')  #change xpath
+        if elements != None:
 
-          #find The space portion of the page,
-          #then go back up one level and sideways one level
-        for element in elements:
+            #find The space portion of the page,
+            #then go back up one level and sideways one level
+            for element in elements:
+                pprint(vars(element))
 
-            if element.text.find('The Space') >= 0:
-                #If you find what you are looking for Go Up One Level Then Go Sideways
-                targetelement = element.getparent().getnext()
-                break
+                if element.text.find('The Space') >= 0:
+                    print 'I find The Space!!!'
+                    #If you find what you are looking for Go Up One Level Then Go Sideways
+                    targetelement = element.getparent().getnext()
 
-        #Depth - First Search of The Target Node
-        descendants = targetelement.iterdescendants()
+            #Depth - First Search of The Target Node
+            descendants = targetelement.iterdescendants()
 
-        for descendant in descendants:
-            #check to make sure there is text in descendant
-            if descendant.text:
-                ##Find Property Type##
-                if descendant.text.find('Property type:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+            for descendant in descendants:
+                #check to make sure there is text in descendant
+                if descendant.text:
+                    ##Find Property Type##
+                    if descendant.text.find('Property type:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')  #change xpath and add getparent()
 
-                    if len(prop) >= 1:
-                        dat['PropType'] = prop[0].text
+                        if len(prop) >= 1:
+                            dat['PropType'] = prop[0].text
 
-                ##Find Accomodates ####
-                if descendant.text.find('Accommodates:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['Accommodates'] = prop[0].text
+                    ##Find Accomodates ####
+                    if descendant.text.find('Accommodates:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['Accommodates'] = prop[0].text
 
-                ##Find Bedrooms ####
-                if descendant.text.find('Bedrooms:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['Bedrooms'] = prop[0].text
+                    ##Find Bedrooms ####
+                    if descendant.text.find('Bedrooms:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['Bedrooms'] = prop[0].text
 
-                ##Find Bathrooms ####
-                if descendant.text.find('Bathrooms:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['Bathrooms'] = prop[0].text
+                    ##Find Bathrooms ####
+                    if descendant.text.find('Bathrooms:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['Bathrooms'] = prop[0].text
 
-                ##Find Number of Beds ####
-                if descendant.text.find('Beds:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['NumBeds'] = prop[0].text
+                    ##Find Number of Beds ####
+                    if descendant.text.find('Beds:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['NumBeds'] = prop[0].text
 
-               ##Find Bed Type ####
-                if descendant.text.find('Bed type:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['BedType'] = prop[0].text
+                    ##Find Bed Type ####
+                    if descendant.text.find('Bed type:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['BedType'] = prop[0].text
 
-               ##Find Check In Time ####
-                if descendant.text.find('Check In:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['CheckIn'] = prop[0].text
+                    ##Find Check In Time ####
+                    if descendant.text.find('Check In:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['CheckIn'] = prop[0].text
 
-                ##Find Check Out Time ####
-                if descendant.text.find('Check Out:') >= 0:
-                    prop =  descendant.xpath('.//strong')
-                    if len(prop) >= 1:
-                        dat['CheckOut'] = prop[0].text
+                    ##Find Check Out Time ####
+                    if descendant.text.find('Check Out:') >= 0:
+                        prop =  descendant.getparent().xpath('.//strong')
+                        if len(prop) >= 1:
+                            dat['CheckOut'] = prop[0].text
         return dat
-
     except:
         print 'Error in getting Space Elements for listing iD: %s' % str(ListingID)
         return dat
+
+
 
 #######################################
 #  Xi's Functions #####################
@@ -601,6 +642,9 @@ def getPriceInfo(tree, ListingID):
     -----------------
     This function parses an individual listing's page to find
     the all of the data in the "Price" row, such as Cleaning Fee, Security Deposit, Weekly Price, etc.
+    -----------------
+    03/28/2016 Update by Claire:
+    Modified for current xml structure.
     """
     #Initialize Values
     dat = {'ExtraPeople': 'Not Found', 'CleaningFee': 'Not Found', 'SecurityDeposit': 'Not Found',
@@ -608,10 +652,10 @@ def getPriceInfo(tree, ListingID):
 
     try:
         #Get Nodes That Contain The Grey Text, So That You Can Search For Sections
-        elements = tree.xpath('//*[@class="text-muted"]')
+        elements = tree.xpath('//div[@class="col-md-3 text-muted"]/span')
 
-          #find The price portion of the page,
-          #then go back up one level and sideways one level
+        #find The price portion of the page,
+        #then go back up one level and sideways one level
         for element in elements:
 
             if element.text.find('Prices') >= 0:
@@ -627,44 +671,47 @@ def getPriceInfo(tree, ListingID):
             if descendant.text:
                 ##Find Extra People Free ##
                 if descendant.text.find('Extra people:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+                    prop =  descendant.getparent().xpath('.//strong')
                     if len(prop) >= 1:
                         dat['ExtraPeople'] = prop[0].text
 
                 ##Find Cleaning Fee ####
                 if descendant.text.find('Cleaning Fee:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+                    prop =  descendant.getparent().xpath('.//strong')
                     if len(prop) >= 1:
                         dat['CleaningFee'] = prop[0].text
 
                 ##Find Security Deposit ####
                 if descendant.text.find('Security Deposit:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+                    prop =  descendant.getparent().xpath('.//strong')
                     if len(prop) >= 1:
                         dat['SecurityDeposit'] = prop[0].text
 
                 ##Find Weekly Price ####
                 if descendant.text.find('Weekly Price:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+                    prop =  descendant.getparent().xpath('.//strong')
                     if len(prop) >= 1:
                         dat['WeeklyPrice'] = prop[0].text
 
                 ##Find Monthly Price ####
                 if descendant.text.find('Monthly Price:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+                    prop =  descendant.getparent().xpath('.//strong')
                     if len(prop) >= 1:
                         dat['MonthlyPrice'] = prop[0].text
 
                 ##Find Cancellation ####
                 if descendant.text.find('Cancellation:') >= 0:
-                    prop =  descendant.xpath('.//strong/*')
+                    prop =  descendant.getparent().xpath('.//strong')
                     if len(prop) >= 1:
                         dat['Cancellation'] = prop[0].text
         return dat
 
     except:
-        print 'Error in getting Space Elements for listing iD: %s' % str(ListingID)
+        print 'Error in getting Price Elements for listing iD: %s' % str(ListingID)
         return dat
+
+
+
 
 #########################################
 #  Amenities ############################
@@ -677,34 +724,41 @@ def getAmenitiesList(tree, ListingID):
     This function parses an individual listing's page to find
     the amenities available in the listing.  The amenities that are available
     are collected into a list.
+    -----------------
+    03/28/2016 Update by Claire:
+    Modified for current xml structure.
     """
     amenities = []
 
     try:
         #Get Nodes That Contain The Grey Text, So That You Can Search For Sections
-        elements = tree.xpath('//*[@class="row amenities"]/div')
+        elements = tree.xpath('//div[@class="row amenities"]/div/span')
 
-          #find The price portion of the page,
-          #then go back up one level and sideways one level
+        #find The price portion of the page,
+        #then go back up one level and sideways one level
         for element in elements:
 
             if element.text.find('Amenities') >= 0:
                 #If you find what you are looking for Go Up One Level Then Go Sideways
-                targetelement = element.getparent().getnext()
+                targetelement = element.getparent().getnext().find('.//div[@class="expandable-content-summary"]')
                 break
 
-        content = targetelement.xpath('//*[@class="expandable-content-full"]')
+        amenities = []
+        descendants = targetelement.iterdescendants()
 
-
-        if len(content) >= 1:
-            for amenity in content[0].xpath('.//span/strong/text()'):
-                amenities.append(amenity.strip())
+        for descendant in descendants:
+            #check to make sure there is text in descendant
+            if descendant.text:
+                amenities.append(descendant.text.strip())
 
         return list(set(amenities))
 
     except:
         print 'Error in getting amenities for listing iD: %s' % str(ListingID)
         return amenities
+
+
+
 
 
 def getAmenities(tree, ListingID):
@@ -715,6 +769,9 @@ def getAmenities(tree, ListingID):
     This function parses an individual listing's page to find
     the amenities available in the listing.  The amenities that are available
     are collected into a list.
+    -----------------
+    03/28/2016 Update by Claire:
+    Modified for current xml structure.
     """
 
        #Initialize Values
@@ -737,6 +794,8 @@ def getAmenities(tree, ListingID):
             dat[amenity] = 1
 
     return dat
+
+
 
 ######################################
 #### Save Results ####################
@@ -771,24 +830,13 @@ class DictUnicodeWriter(object):
 
 def writeToCSV(resultDict, outfile):
 
-    colnames = [ 'ListingID', 'Title','UserID','baseurl',  'Price', \
-        'AboutListing','HostName', 'MemberDate', 'Lat','Long','BookInstantly','Cancellation',  \
-        'OverallCounter','PageCounter','PageNumber', \
-         'A_AC','A_Breakfast','A_CableTV','A_CarbonMonoxDetector','A_Doorman','A_Dryer','A_TV', \
-         'A_Elevator','A_Essentials','A_Events','A_FamilyFriendly','A_FireExt','A_Fireplace','A_FirstAidKit', \
-         'A_Gym','A_Heat','A_HotTub','A_Intercom','A_Internet','A_Kitchen','A_Parking','A_Pets','A_Pool','A_SafetyCard', \
-         'A_Shampoo','A_SmokeDetector','A_Smoking','A_Washer','A_Wheelchair', \
-         'P_Cleaning','P_Deposit','P_ExtraPeople','P_Monthly','P_Weekly', \
-         'R_CI','R_acc','R_clean','R_comm', \
-         'R_loc','R_val', \
-         'RespRate','RespTime', \
-         'S_Accomodates','S_Bathrooms','S_BedType','S_Bedrooms', \
-         'S_CheckIn','S_Checkout','S_NumBeds','S_PropType','ShortDesc']
+    colnames = [ 'ListingID', 'Title','UserID','baseurl',  'Price',         'AboutListing','HostName', 'MemberDate', 'Lat','Long','BookInstantly','Cancellation',          'OverallCounter','PageCounter','PageNumber',          'A_AC','A_Breakfast','A_CableTV','A_CarbonMonoxDetector','A_Doorman','A_Dryer','A_TV',          'A_Elevator','A_Essentials','A_Events','A_FamilyFriendly','A_FireExt','A_Fireplace','A_FirstAidKit',          'A_Gym','A_Heat','A_HotTub','A_Intercom','A_Internet','A_Kitchen','A_Parking','A_Pets','A_Pool','A_SafetyCard',          'A_Shampoo','A_SmokeDetector','A_Smoking','A_Washer','A_Wheelchair',          'P_Cleaning','P_Deposit','P_ExtraPeople','P_Monthly','P_Weekly',          'R_CI','R_acc','R_clean','R_comm',          'R_loc','R_val',          'RespRate','RespTime',          'S_Accomodates','S_Bathrooms','S_BedType','S_Bedrooms',          'S_CheckIn','S_Checkout','S_NumBeds','S_PropType','ShortDesc']
 
     with open(outfile, 'wb') as f:
         w = DictUnicodeWriter(f, fieldnames=colnames)
         w.writeheader()
         w.writerows(resultDict)
+
 
 #######################################
 #  Testing ############################
@@ -805,3 +853,5 @@ if __name__ == '__main__':
 
     #Write Out Results To CSV File, using function I defined
     writeToCSV(DetailResults, 'OutputFile.csv')
+
+
