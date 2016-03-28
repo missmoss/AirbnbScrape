@@ -5,7 +5,7 @@ Created on Sat Nov  1 20:29:41 2014
 CS109 Harvard Intro To Data Science
 Scraping Airbnb
 
-Update on Mon Mar 28 2016
+Updated on Mon Mar 28 2016
 @Claire Tsao
 """
 
